@@ -30,7 +30,7 @@ def _add_context(_logger: Any, _method_name: str, event_dict: MutableMapping[str
     return event_dict
 
 
-def configure_logging(_level: str = "INFO") -> None:
+def configure_logging() -> None:
     structlog.configure(
         processors=[
             structlog.contextvars.merge_contextvars,

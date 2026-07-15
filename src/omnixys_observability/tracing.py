@@ -16,7 +16,6 @@ def configure_tracing(
     service_name: str = "omnixys",
     otlp_endpoint: str = "http://localhost:4318/v1/traces",
     environment: str = "local",
-    _sampling_probability: float = 0.1,
 ) -> None:
     resource = Resource.create({
         "service.name": service_name,
