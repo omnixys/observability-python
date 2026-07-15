@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import cast
+from typing import Any, cast
 
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
@@ -31,11 +31,11 @@ def configure_tracing(
     HTTPXClientInstrumentor().instrument()
 
 
-def instrument_fastapi(app: object) -> None:
+def instrument_fastapi(app: Any) -> None:
     FastAPIInstrumentor.instrument_app(app)
 
 
-def uninstrument_fastapi(app: object) -> None:
+def uninstrument_fastapi(app: Any) -> None:
     FastAPIInstrumentor.uninstrument_app(app)
 
 

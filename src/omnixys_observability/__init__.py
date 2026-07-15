@@ -28,10 +28,10 @@ __all__ = [
     "graphql_operations",
     "http_request_duration",
     "http_requests_total",
+    "instrument_fastapi",
     "kafka_publish_failures",
     "kafka_publish_total",
     "rate_limit_blocked",
-    "instrument_fastapi",
     "shutdown_tracing",
     "uninstrument_fastapi",
 ]
