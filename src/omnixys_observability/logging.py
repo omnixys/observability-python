@@ -24,8 +24,8 @@ def _add_context(_logger: Any, _method_name: str, event_dict: MutableMapping[str
     span = trace.get_current_span()
     span_context = span.get_span_context()
     if span_context.is_valid:
-        event_dict["trace_id"] = hex(span_context.trace_id)
-        event_dict["span_id"] = hex(span_context.span_id)
+        event_dict["traceId"] = format(span_context.trace_id, "032x")
+        event_dict["spanId"] = format(span_context.span_id, "016x")
 
     return event_dict
 
