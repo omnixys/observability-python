@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 import structlog
 from opentelemetry import trace
 
-from omnixys_observability.request_context import current_request_context
+from observability.request_context import current_request_context
 
 if TYPE_CHECKING:
     from collections.abc import MutableMapping

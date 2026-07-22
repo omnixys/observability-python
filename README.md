@@ -19,7 +19,7 @@ pip install omnixys-observability
 ## Usage
 
 ```python
-from omnixys_observability import configure_logging, configure_tracing, instrument_fastapi
+from observability import configure_logging, configure_tracing, instrument_fastapi
 ```
 
 ## License
