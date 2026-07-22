@@ -2,27 +2,37 @@
 name = "omnixys-observability"
 dynamic = ["version"]
 description = "Omnixys shared observability package (OTel tracing, structured logging, Prometheus metrics)"
+readme = "README.md"
 license = { text = "GPL-3.0-or-later" }
 requires-python = ">=3.14"
+authors = [{ name = "Omnixys Team", email = "team@omnixys.com" }]
+keywords = ["omnixys", "observability", "opentelemetry", "tracing", "metrics", "logging"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Programming Language :: Python :: 3.14",
+    "Typing :: Typed",
+]
 dependencies = [
-  "fastapi>=0.115.0",
-  "httpx>=0.28.0",
-  "structlog>=26.1.0",
-  "prometheus-client>=0.25.0",
-  "opentelemetry-api>=1.42.1",
-  "opentelemetry-sdk>=1.42.1",
-  "opentelemetry-exporter-otlp-proto-http>=1.42.1",
-  "opentelemetry-instrumentation>=0.63b1",
-  "opentelemetry-instrumentation-fastapi>=0.63b1",
-  "opentelemetry-instrumentation-sqlalchemy>=0.63b1",
-  "opentelemetry-instrumentation-logging>=0.63b1",
-  "opentelemetry-instrumentation-httpx>=0.63b1",
-  "opentelemetry-instrumentation-asgi>=0.63b1",
+    "fastapi>=0.115.0",
+    "httpx>=0.28.0",
+    "structlog>=26.1.0",
+    "prometheus-client>=0.25.0",
+    "opentelemetry-api>=1.42.1",
+    "opentelemetry-sdk>=1.42.1",
+    "opentelemetry-exporter-otlp-proto-http>=1.42.1",
+    "opentelemetry-instrumentation>=0.63b1",
+    "opentelemetry-instrumentation-fastapi>=0.63b1",
+    "opentelemetry-instrumentation-sqlalchemy>=0.63b1",
+    "opentelemetry-instrumentation-logging>=0.63b1",
+    "opentelemetry-instrumentation-httpx>=0.63b1",
+    "opentelemetry-instrumentation-asgi>=0.63b1",
 ]
 
-authors = [
-  {name = "Omnixys Team", email = "team@omnixys.com"},
-]
+[project.urls]
+Homepage = "https://github.com/omnixys/omnixys"
+Repository = "https://github.com/omnixys/omnixys"
 
 [build-system]
 requires = ["hatchling"]
@@ -30,6 +40,17 @@ build-backend = "hatchling.build"
 
 [tool.hatch.version]
 path = "src/omnixys_observability/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/omnixys_observability"]
+
+[dependency-groups]
+dev = [
+    "mypy>=2.3.0",
+    "ruff>=0.15.21",
+    "pytest>=9.1.0",
+    "pytest-asyncio>=0.26.0",
+]
 
 [tool.ruff]
 line-length = 120
@@ -40,11 +61,11 @@ select = ["ALL"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = [
-  "ANN101", "ANN401", "S101",
-  "T20", "FBT", "D", "INP001",
+    "ANN101", "ANN401", "S101",
+    "T20", "FBT", "D", "INP001",
 ]
 "src/**" = [
-  "S104", "D", "ANN401", "ARG002",
+    "S104", "D", "ANN401", "ARG002",
 ]
 
 [tool.mypy]
@@ -53,11 +74,3 @@ strict = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
-
-[dependency-groups]
-dev = [
-    "mypy>=2.3.0",
-    "ruff>=0.15.21",
-    "pytest>=9.1.0",
-    "pytest-asyncio>=0.26.0",
-]
