@@ -1,3 +1,10 @@
+## [2.0.3](https://github.com/omnixys/observability-python/compare/v2.0.2...v2.0.3) (2026-07-22)
+
+
+### Bug Fixes
+
+* **publish:** replace gh release upload with uv publish to PyPI ([420ef67](https://github.com/omnixys/observability-python/commit/420ef6724596d9fb311e7af3c1a0d17d7b151d2a))
+
 ## [2.0.2](https://github.com/omnixys/observability-python/compare/v2.0.1...v2.0.2) (2026-07-22)
 
 
