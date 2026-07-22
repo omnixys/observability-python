@@ -1,3 +1,10 @@
+## [2.0.4](https://github.com/omnixys/observability-python/compare/v2.0.3...v2.0.4) (2026-07-22)
+
+
+### Bug Fixes
+
+* **publish:** add uv build before uv publish ([d5aa1fa](https://github.com/omnixys/observability-python/commit/d5aa1fa58a97432ebd70926451eb74a6916333ee))
+
 ## [2.0.3](https://github.com/omnixys/observability-python/compare/v2.0.2...v2.0.3) (2026-07-22)
 
 

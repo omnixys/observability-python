@@ -25,7 +25,7 @@ from omnixys_observability.request_context import (
 )
 from omnixys_observability.tracing import configure_tracing, instrument_fastapi, shutdown_tracing, uninstrument_fastapi
 
-__version__ = "2.0.3"
+__version__ = "2.0.4"
 
 __all__ = [
     "ObservabilityMetrics",
