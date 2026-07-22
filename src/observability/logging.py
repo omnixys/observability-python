@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Any
 
 import structlog
@@ -30,7 +31,7 @@ def _add_context(_logger: Any, _method_name: str, event_dict: MutableMapping[str
     return event_dict
 
 
-def configure_logging() -> None:
+def configure_logging(log_level: str = "INFO") -> None:
     structlog.configure(
         processors=[
             structlog.contextvars.merge_contextvars,
@@ -42,6 +43,10 @@ def configure_logging() -> None:
         wrapper_class=structlog.stdlib.BoundLogger,
         logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,
+    )
+    logging.basicConfig(
+        level=getattr(logging, log_level.upper(), logging.INFO),
+        format="%(message)s",
     )
 
 

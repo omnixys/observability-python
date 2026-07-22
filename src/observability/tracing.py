@@ -10,18 +10,25 @@ from opentelemetry.instrumentation.logging import LoggingInstrumentor
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.sdk.trace.sampling import ALWAYS_ON, TraceIdRatioBased
 
 
 def configure_tracing(
     service_name: str = "omnixys",
     otlp_endpoint: str = "http://localhost:4318/v1/traces",
     environment: str = "local",
+    *,
+    enabled: bool = True,
+    sampling_probability: float = 0.1,
 ) -> None:
+    if not enabled:
+        return
     resource = Resource.create({
         "service.name": service_name,
         "deployment.environment": environment,
     })
-    provider = TracerProvider(resource=resource)
+    sampler = TraceIdRatioBased(sampling_probability) if sampling_probability < 1.0 else ALWAYS_ON
+    provider = TracerProvider(resource=resource, sampler=sampler)
     exporter = OTLPSpanExporter(endpoint=otlp_endpoint)
     processor = BatchSpanProcessor(exporter)
     provider.add_span_processor(processor)
