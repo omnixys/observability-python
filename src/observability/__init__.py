@@ -1,4 +1,4 @@
-from observability.logging import configure_logging, get_logger
+from observability.logging import configure_logging, get_logger, shutdown_logging
 from observability.metrics import (
     ObservabilityMetrics,
     ObservabilityMiddleware,
@@ -23,6 +23,7 @@ from observability.request_context import (
     reset_request_context,
     set_request_context,
 )
+from observability.runtime import configure_observability, shutdown_observability
 from observability.tracing import configure_tracing, instrument_fastapi, shutdown_tracing, uninstrument_fastapi
 
 __version__ = "2.0.4"
@@ -35,6 +36,7 @@ __all__ = [
     "cache_hits",
     "cache_misses",
     "configure_logging",
+    "configure_observability",
     "configure_tracing",
     "current_request_context",
     "db_query_duration",
@@ -53,5 +55,7 @@ __all__ = [
     "reset_request_context",
     "set_request_context",
     "shutdown_tracing",
+    "shutdown_logging",
+    "shutdown_observability",
     "uninstrument_fastapi",
 ]

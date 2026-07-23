@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, cast
+import os
+from typing import Any
 
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
@@ -25,11 +26,13 @@ def configure_tracing(
         return
     resource = Resource.create({
         "service.name": service_name,
-        "deployment.environment": environment,
+        "service.namespace": "omnixys",
+        "service.version": os.environ.get("OTEL_SERVICE_VERSION", "unknown"),
+        "deployment.environment.name": environment,
     })
     sampler = TraceIdRatioBased(sampling_probability) if sampling_probability < 1.0 else ALWAYS_ON
     provider = TracerProvider(resource=resource, sampler=sampler)
-    exporter = OTLPSpanExporter(endpoint=otlp_endpoint)
+    exporter = OTLPSpanExporter(endpoint=_signal_endpoint(otlp_endpoint, "traces"))
     processor = BatchSpanProcessor(exporter)
     provider.add_span_processor(processor)
     trace.set_tracer_provider(provider)
@@ -46,5 +49,16 @@ def uninstrument_fastapi(app: Any) -> None:
 
 
 def shutdown_tracing() -> None:
-    provider = cast("TracerProvider", trace.get_tracer_provider())
-    provider.shutdown()
+    provider = trace.get_tracer_provider()
+    shutdown = getattr(provider, "shutdown", None)
+    if callable(shutdown):
+        shutdown()
+
+
+def _signal_endpoint(endpoint: str, signal: str) -> str:
+    base = endpoint.rstrip("/")
+    for suffix in ("/v1/traces", "/v1/logs"):
+        if base.endswith(suffix):
+            base = base[: -len(suffix)]
+            break
+    return f"{base}/v1/{signal}"
