@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import logging
+import os
 from typing import TYPE_CHECKING, Any
 
 import structlog
 from opentelemetry import trace
+from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
+from opentelemetry.sdk._logs import BatchLogRecordProcessor, LoggerProvider, LoggingHandler
+from opentelemetry.sdk.resources import Resource
 
 from observability.request_context import current_request_context
 
@@ -31,7 +35,29 @@ def _add_context(_logger: Any, _method_name: str, event_dict: MutableMapping[str
     return event_dict
 
 
-def configure_logging(log_level: str = "INFO") -> None:
+def _setup_otel_logging(service_name: str) -> None:
+    endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318")
+    resource = Resource.create(
+        {
+            "service.name": service_name,
+            "service.namespace": "omnixys",
+        }
+    )
+
+    logger_provider = LoggerProvider(resource=resource)
+    logger_provider.add_log_record_processor(
+        BatchLogRecordProcessor(OTLPLogExporter(endpoint=f"{endpoint}/v1/logs"))
+    )
+
+    handler = LoggingHandler(logger_provider=logger_provider)
+    handler.setLevel(logging.DEBUG)
+    logging.getLogger().addHandler(handler)
+
+
+def configure_logging(log_level: str = "INFO", service_name: str | None = None) -> None:
+    if service_name:
+        _setup_otel_logging(service_name)
+
     structlog.configure(
         processors=[
             structlog.contextvars.merge_contextvars,
