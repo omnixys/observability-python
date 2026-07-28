@@ -26,18 +26,28 @@ def _add_context(_logger: Any, _method_name: str, event_dict: MutableMapping[str
         event_dict["service"] = _service_name
     ctx = current_request_context()
     if ctx:
+        if ctx.request_id:
+            event_dict["request_id"] = ctx.request_id
         if ctx.correlation_id:
             event_dict["correlation_id"] = ctx.correlation_id
         if ctx.user_id:
             event_dict["user_id"] = ctx.user_id
+            event_dict["actor_id"] = ctx.user_id
         if ctx.organization_id:
             event_dict["organization_id"] = ctx.organization_id
+        if ctx.tenant_id:
+            event_dict["tenant_id"] = ctx.tenant_id
 
     span = trace.get_current_span()
     span_context = span.get_span_context()
     if span_context.is_valid:
         event_dict["traceId"] = format(span_context.trace_id, "032x")
         event_dict["spanId"] = format(span_context.span_id, "016x")
+    elif ctx:
+        if ctx.trace_id:
+            event_dict["traceId"] = ctx.trace_id
+        if ctx.span_id:
+            event_dict["spanId"] = ctx.span_id
 
     return event_dict
 

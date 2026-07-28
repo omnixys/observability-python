@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 class RequestContext:
     user_id: str | None = None
     organization_id: str | None = None
+    tenant_id: str | None = None
     roles: list[str] = field(default_factory=list)
     scope: list[str] = field(default_factory=list)
     correlation_id: str | None = None
