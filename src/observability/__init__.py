@@ -54,8 +54,8 @@ __all__ = [
     "rate_limit_blocked",
     "reset_request_context",
     "set_request_context",
-    "shutdown_tracing",
     "shutdown_logging",
     "shutdown_observability",
+    "shutdown_tracing",
     "uninstrument_fastapi",
 ]

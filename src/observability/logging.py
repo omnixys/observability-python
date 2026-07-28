@@ -6,8 +6,8 @@ import re
 from typing import TYPE_CHECKING, Any
 
 import structlog
-from opentelemetry._logs import set_logger_provider
 from opentelemetry import trace
+from opentelemetry._logs import set_logger_provider
 from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 _SENSITIVE_KEY = re.compile(r"authorization|cookie|password|secret|token|api[-_]?key", re.IGNORECASE)
 
 
-def _add_context(_logger: Any, _method_name: str, event_dict: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+def _add_context(_logger: Any, _method_name: str, event_dict: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: C901
     if _service_name:
         event_dict["service"] = _service_name
     ctx = current_request_context()
@@ -53,7 +53,7 @@ def _add_context(_logger: Any, _method_name: str, event_dict: MutableMapping[str
 
 
 def _redact_sensitive(
-    _logger: Any, _method_name: str, event_dict: MutableMapping[str, Any]
+    _logger: Any, _method_name: str, event_dict: MutableMapping[str, Any],
 ) -> MutableMapping[str, Any]:
     return _redact_mapping(event_dict)
 
@@ -85,19 +85,19 @@ def _signal_endpoint(endpoint: str, signal: str) -> str:
 
 
 def _setup_otel_logging(service_name: str, endpoint: str, environment: str) -> LoggerProvider:
-    global _logger_provider, _service_name
+    global _logger_provider, _service_name  # noqa: PLW0603
     resource = Resource.create(
         {
             "service.name": service_name,
             "service.namespace": "omnixys",
             "service.version": os.environ.get("OTEL_SERVICE_VERSION", "unknown"),
             "deployment.environment.name": environment,
-        }
+        },
     )
 
     logger_provider = LoggerProvider(resource=resource)
     logger_provider.add_log_record_processor(
-        BatchLogRecordProcessor(OTLPLogExporter(endpoint=_signal_endpoint(endpoint, "logs")))
+        BatchLogRecordProcessor(OTLPLogExporter(endpoint=_signal_endpoint(endpoint, "logs"))),
     )
     set_logger_provider(logger_provider)
 
@@ -144,7 +144,7 @@ def get_logger(name: str | None = None) -> Any:
 
 
 def shutdown_logging() -> None:
-    global _logger_provider
+    global _logger_provider  # noqa: PLW0603
     if _logger_provider is not None:
         _logger_provider.shutdown()
         _logger_provider = None

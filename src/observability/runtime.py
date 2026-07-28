@@ -4,7 +4,7 @@ from observability.logging import configure_logging, shutdown_logging
 from observability.tracing import configure_tracing, shutdown_tracing
 
 
-def configure_observability(
+def configure_observability(  # noqa: PLR0913
     *,
     service_name: str,
     otlp_endpoint: str,
