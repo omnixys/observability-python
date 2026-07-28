@@ -1,3 +1,20 @@
+# [3.0.0](https://github.com/omnixys/observability-python/compare/v2.0.4...v3.0.0) (2026-07-28)
+
+
+### Bug Fixes
+
+* **ci:** Update ci.yaml ([afd413a](https://github.com/omnixys/observability-python/commit/afd413aff3310a69dd58ce56ebbc6c847ad2f664))
+* **lint:** resolve all ruff lint violations ([b3128ed](https://github.com/omnixys/observability-python/commit/b3128ed70435052e3d81c0d2c9677207ed27e3b4))
+* **observability:** update BatchLogRecordProcessor import for newer opentelemetry SDK ([c693cfc](https://github.com/omnixys/observability-python/commit/c693cfc978275b8559901cc9a820f249de0778bf))
+
+
+### Features
+
+* **logging:** enrich structured log context with request_id, tenant_id, actor_id ([a5bbe37](https://github.com/omnixys/observability-python/commit/a5bbe37714c3785a4bdaef5a883b366c190599a3))
+* **observability:** add enabled, sampling_probability and log_level params ([aa57beb](https://github.com/omnixys/observability-python/commit/aa57beb350bd7858226b27abccad9c0f6db0dd7b))
+* **observability:** add OTel log exporter to Python logging ([3738c7a](https://github.com/omnixys/observability-python/commit/3738c7a282aa9ddb559ebe3f2d86995048e47055))
+* **observability:** configure canonical OTLP logging ([d00d72e](https://github.com/omnixys/observability-python/commit/d00d72e5d41f1a41e0be3ad733ca709cb6813a60))
+
 ## [2.0.4](https://github.com/omnixys/observability-python/compare/v2.0.3...v2.0.4) (2026-07-22)
 
 

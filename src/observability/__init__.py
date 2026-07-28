@@ -26,7 +26,7 @@ from observability.request_context import (
 from observability.runtime import configure_observability, shutdown_observability
 from observability.tracing import configure_tracing, instrument_fastapi, shutdown_tracing, uninstrument_fastapi
 
-__version__ = "2.0.4"
+__version__ = "3.0.0"
 
 __all__ = [
     "ObservabilityMetrics",
