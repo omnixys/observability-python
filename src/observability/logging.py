@@ -86,6 +86,8 @@ def _signal_endpoint(endpoint: str, signal: str) -> str:
 
 def _setup_otel_logging(service_name: str, endpoint: str, environment: str) -> LoggerProvider:
     global _logger_provider, _service_name  # noqa: PLW0603
+    if _logger_provider is not None:
+        return _logger_provider
     resource = Resource.create(
         {
             "service.name": service_name,
@@ -116,6 +118,10 @@ def configure_logging(
     otlp_endpoint: str | None = None,
     environment: str = "local",
 ) -> None:
+    logging.basicConfig(
+        level=getattr(logging, log_level.upper(), logging.INFO),
+        format="%(message)s",
+    )
     if service_name:
         endpoint = otlp_endpoint or os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318")
         _setup_otel_logging(service_name, endpoint, environment)
