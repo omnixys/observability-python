@@ -1,3 +1,10 @@
+# [4.0.0](https://github.com/omnixys/observability-python/compare/v3.0.0...v4.0.0) (2026-08-03)
+
+
+### Features
+
+* **logging:** set root log level before attaching OTLP handler ([6110baa](https://github.com/omnixys/observability-python/commit/6110baa3bf6aad7a3ea6a64747dd718075162af9))
+
 # [3.0.0](https://github.com/omnixys/observability-python/compare/v2.0.4...v3.0.0) (2026-07-28)
 
 
