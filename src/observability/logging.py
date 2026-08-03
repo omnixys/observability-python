@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import json
 import logging
 import os
 import re
-from typing import TYPE_CHECKING, Any
+import sys
+from typing import TYPE_CHECKING, Any, TextIO
 
 import structlog
 from opentelemetry import trace
@@ -12,6 +14,7 @@ from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.sdk.resources import Resource
+from structlog.dev import ConsoleRenderer
 
 from observability.request_context import current_request_context
 
@@ -33,8 +36,6 @@ def _add_context(_logger: Any, _method_name: str, event_dict: MutableMapping[str
         if ctx.user_id:
             event_dict["user_id"] = ctx.user_id
             event_dict["actor_id"] = ctx.user_id
-        if ctx.organization_id:
-            event_dict["organization_id"] = ctx.organization_id
         if ctx.tenant_id:
             event_dict["tenant_id"] = ctx.tenant_id
 
@@ -73,6 +74,9 @@ def _redact_mapping(value: MutableMapping[str, Any]) -> MutableMapping[str, Any]
 
 _logger_provider: LoggerProvider | None = None
 _service_name: str | None = None
+_console_handlers: list[logging.Handler] = []
+_otlp_handler: logging.Handler | None = None
+_otel_logger_provider_registered = False
 
 
 def _signal_endpoint(endpoint: str, signal: str) -> str:
@@ -85,7 +89,7 @@ def _signal_endpoint(endpoint: str, signal: str) -> str:
 
 
 def _setup_otel_logging(service_name: str, endpoint: str, environment: str) -> LoggerProvider:
-    global _logger_provider, _service_name  # noqa: PLW0603
+    global _logger_provider, _service_name, _otlp_handler, _otel_logger_provider_registered  # noqa: PLW0603
     if _logger_provider is not None:
         return _logger_provider
     resource = Resource.create(
@@ -101,14 +105,54 @@ def _setup_otel_logging(service_name: str, endpoint: str, environment: str) -> L
     logger_provider.add_log_record_processor(
         BatchLogRecordProcessor(OTLPLogExporter(endpoint=_signal_endpoint(endpoint, "logs"))),
     )
-    set_logger_provider(logger_provider)
+    if not _otel_logger_provider_registered:
+        set_logger_provider(logger_provider)
+        _otel_logger_provider_registered = True
 
+    root = logging.getLogger()
+    if _otlp_handler is not None:
+        root.removeHandler(_otlp_handler)
     handler = LoggingHandler(logger_provider=logger_provider)
     handler.setLevel(logging.DEBUG)
-    logging.getLogger().addHandler(handler)
+    root.addHandler(handler)
+    _otlp_handler = handler
     _logger_provider = logger_provider
     _service_name = service_name
     return logger_provider
+
+
+def _console_pretty(environment: str) -> bool:
+    flag = os.environ.get("LOG_PRETTY")
+    if flag == "true":
+        return True
+    if flag == "false":
+        return False
+    return environment.lower() != "production"
+
+
+class _JsonConsoleFormatter(logging.Formatter):
+    """Re-render structlog JSON messages as readable colored console lines."""
+
+    def __init__(self, *, colors: bool) -> None:
+        super().__init__(fmt="%(message)s")
+        self._renderer = ConsoleRenderer(colors=colors)
+
+    def format(self, record: logging.LogRecord) -> str:
+        message = record.getMessage()
+        try:
+            event_dict = json.loads(message)
+        except (TypeError, ValueError):
+            return message
+        if not isinstance(event_dict, dict):
+            return message
+        event_dict.pop("level_number", None)
+        return self._renderer(None, None, event_dict)  # type: ignore[arg-type]
+
+
+def _build_console_formatter(*, pretty: bool) -> logging.Formatter:
+    if pretty:
+        return _JsonConsoleFormatter(colors=True)
+    return logging.Formatter("%(message)s")
 
 
 def configure_logging(
@@ -117,11 +161,23 @@ def configure_logging(
     *,
     otlp_endpoint: str | None = None,
     environment: str = "local",
+    console_stream: TextIO | None = None,
 ) -> None:
-    logging.basicConfig(
-        level=getattr(logging, log_level.upper(), logging.INFO),
-        format="%(message)s",
-    )
+    level = getattr(logging, log_level.upper(), logging.INFO)
+    root = logging.getLogger()
+    root.setLevel(level)
+
+    for handler in _console_handlers:
+        root.removeHandler(handler)
+    _console_handlers.clear()
+
+    stream = console_stream if console_stream is not None else sys.stdout
+    console_handler = logging.StreamHandler(stream)
+    console_handler.setLevel(level)
+    console_handler.setFormatter(_build_console_formatter(pretty=_console_pretty(environment)))
+    root.addHandler(console_handler)
+    _console_handlers.append(console_handler)
+
     if service_name:
         endpoint = otlp_endpoint or os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318")
         _setup_otel_logging(service_name, endpoint, environment)
@@ -132,16 +188,13 @@ def configure_logging(
             structlog.stdlib.add_log_level,
             _add_context,
             _redact_sensitive,
+            structlog.processors.format_exc_info,
             structlog.processors.TimeStamper(fmt="iso", utc=True),
             structlog.processors.JSONRenderer(),
         ],
         wrapper_class=structlog.stdlib.BoundLogger,
         logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,
-    )
-    logging.basicConfig(
-        level=getattr(logging, log_level.upper(), logging.INFO),
-        format="%(message)s",
     )
 
 
@@ -150,7 +203,11 @@ def get_logger(name: str | None = None) -> Any:
 
 
 def shutdown_logging() -> None:
-    global _logger_provider  # noqa: PLW0603
+    global _logger_provider, _otlp_handler  # noqa: PLW0603
+    root = logging.getLogger()
+    if _otlp_handler is not None:
+        root.removeHandler(_otlp_handler)
+        _otlp_handler = None
     if _logger_provider is not None:
         _logger_provider.shutdown()
         _logger_provider = None

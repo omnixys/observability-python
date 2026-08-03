@@ -5,6 +5,8 @@ from __future__ import annotations
 import importlib
 from importlib.metadata import version as pkg_version
 
+from observability import logging, metrics, tracing
+
 
 def test_package_importable() -> None:
     mod = importlib.import_module("observability")
@@ -13,8 +15,6 @@ def test_package_importable() -> None:
 
 
 def test_public_api() -> None:
-    from observability import logging, metrics, tracing
-
     assert logging is not None
     assert metrics is not None
     assert tracing is not None
