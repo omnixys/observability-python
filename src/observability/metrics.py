@@ -108,6 +108,54 @@ class ObservabilityMetrics:
         self.outbox_processing_duration = outbox_processing_duration
 
 
+class RateLimitMetrics:
+    """Per-key in-memory hit counters, mirroring the TS `RateLimitMetrics`."""
+
+    def __init__(self) -> None:
+        self._hits: dict[str, int] = {}
+
+    def hit(self, key: str) -> None:
+        self._hits[key] = self._hits.get(key, 0) + 1
+
+    def get(self, key: str) -> int:
+        return self._hits.get(key, 0)
+
+    def reset(self, key: str | None = None) -> None:
+        if key is None:
+            self._hits.clear()
+        else:
+            self._hits.pop(key, None)
+
+    def totals(self) -> dict[str, int]:
+        return dict(self._hits)
+
+
+class SloMetrics:
+    """Track success/error totals and derive an error rate."""
+
+    def __init__(self) -> None:
+        self._errors = 0
+        self._total = 0
+
+    def record_success(self) -> None:
+        self._total += 1
+
+    def record_error(self) -> None:
+        self._total += 1
+        self._errors += 1
+
+    @property
+    def total(self) -> int:
+        return self._total
+
+    @property
+    def errors(self) -> int:
+        return self._errors
+
+    def error_rate(self) -> float:
+        return self._errors / self._total if self._total > 0 else 0.0
+
+
 class ObservabilityMiddleware:
     def __init__(
         self,

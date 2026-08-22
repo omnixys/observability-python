@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import functools
+import inspect
 import os
-from typing import Any
+from collections.abc import Callable
+from typing import Any, overload
 
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
@@ -12,6 +15,61 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.sdk.trace.sampling import ALWAYS_ON, TraceIdRatioBased
+
+
+@overload
+def span[F: Callable[..., Any]](func: F) -> F: ...
+
+
+@overload
+def span[F: Callable[..., Any]](
+    *,
+    name: str | None = None,
+    attributes: dict[str, Any] | None = None,
+) -> Callable[[F], F]: ...
+
+
+def span[F: Callable[..., Any]](
+    func: F | None = None,
+    *,
+    name: str | None = None,
+    attributes: dict[str, Any] | None = None,
+) -> F | Callable[[F], F]:
+    """Decorator wrapping a sync or async function in an OpenTelemetry span.
+
+    Usage:
+        @span
+        async def do_work(): ...
+
+        @span(name="custom.work", attributes={"source": "web"})
+        def compute(): ...
+    """
+
+    def decorator(fn: F) -> F:
+        span_name = name or fn.__qualname__
+
+        @functools.wraps(fn)
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+            tracer = trace.get_tracer("observability")
+            with tracer.start_as_current_span(span_name) as active:
+                _apply_attributes(active, attributes)
+                return await fn(*args, **kwargs)
+
+        @functools.wraps(fn)
+        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+            tracer = trace.get_tracer("observability")
+            with tracer.start_as_current_span(span_name) as active:
+                _apply_attributes(active, attributes)
+                return fn(*args, **kwargs)
+
+        return async_wrapper if inspect.iscoroutinefunction(fn) else sync_wrapper  # type: ignore[return-value]
+
+    return decorator(func) if func is not None else decorator
+
+
+def _apply_attributes(span: Any, attributes: dict[str, Any] | None) -> None:
+    if attributes:
+        span.set_attributes(attributes)
 
 
 def configure_tracing(

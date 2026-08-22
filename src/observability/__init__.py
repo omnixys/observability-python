@@ -1,7 +1,10 @@
+from observability.errors import ErrorClassifier, classify_error
 from observability.logging import configure_logging, get_logger, shutdown_logging
 from observability.metrics import (
     ObservabilityMetrics,
     ObservabilityMiddleware,
+    RateLimitMetrics,
+    SloMetrics,
     auth_failures,
     cache_hits,
     cache_misses,
@@ -24,17 +27,21 @@ from observability.request_context import (
     set_request_context,
 )
 from observability.runtime import configure_observability, shutdown_observability
-from observability.tracing import configure_tracing, instrument_fastapi, shutdown_tracing, uninstrument_fastapi
+from observability.tracing import configure_tracing, instrument_fastapi, shutdown_tracing, span, uninstrument_fastapi
 
 __version__ = "4.0.0"
 
 __all__ = [
+    "ErrorClassifier",
     "ObservabilityMetrics",
     "ObservabilityMiddleware",
+    "RateLimitMetrics",
     "RequestContext",
+    "SloMetrics",
     "auth_failures",
     "cache_hits",
     "cache_misses",
+    "classify_error",
     "configure_logging",
     "configure_observability",
     "configure_tracing",
@@ -57,5 +64,6 @@ __all__ = [
     "shutdown_logging",
     "shutdown_observability",
     "shutdown_tracing",
+    "span",
     "uninstrument_fastapi",
 ]

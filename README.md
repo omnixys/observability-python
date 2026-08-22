@@ -1,6 +1,6 @@
 # omnixys-observability
 
-Omnixys shared observability package with OpenTelemetry tracing, structured logging, and Prometheus metrics.
+Omnixys shared observability package — OpenTelemetry tracing, structlog structured logging, Prometheus metrics, request-context propagation and error classification.
 
 ## Installation
 
@@ -10,16 +10,87 @@ pip install omnixys-observability
 
 ## Features
 
-- OpenTelemetry distributed tracing
-- Structured logging with structlog
-- Prometheus metrics collection
-- FastAPI instrumentation
-- Request context propagation
+- **Tracing**: OTLP HTTP trace export with ratio/always-on sampling, FastAPI/httpx/logging auto-instrumentation, and a `@span` decorator for functions and methods
+- **Logging**: structlog JSON (or colored pretty) console output, OTLP log export, context enrichment (request/correlation id, user, tenant, trace ids), and recursive secret redaction
+- **Metrics**: Prometheus counters/histograms/gauges for HTTP, GraphQL, DB, Kafka, cache, rate limiting, auth and outbox — plus `RateLimitMetrics` and `SloMetrics` helpers
+- **Request context**: contextvars-based `RequestContext` propagation across async boundaries
+- **Errors**: `classify_error()`/`ErrorClassifier` buckets into `server_error` / `client_error` / `internal_error`
+- **Runtime**: `configure_observability()` one-call setup of traces + logs with a shared service resource
 
 ## Usage
 
+### One-call setup
+
 ```python
-from observability import configure_logging, configure_tracing, instrument_fastapi
+from observability import configure_observability, shutdown_observability
+
+configure_observability(
+    service_name="ticketing",
+    otlp_endpoint="http://collector:4318",
+    environment="production",
+)
+```
+
+### Structured logging
+
+```python
+from observability import configure_logging, get_logger, RequestContext, set_request_context
+
+configure_logging("INFO", service_name="ticketing")
+
+set_request_context(RequestContext(request_id="r1", user_id="u1", tenant_id="t1"))
+log = get_logger("ticketing")
+log.info("event_created", event_id="e1")
+log.error("payment_failed", status=503, token="sk_live_...")  # token -> [REDACTED]
+```
+
+`LOG_PRETTY=true` forces colored console output; production defaults to JSON.
+
+### Spans
+
+```python
+from observability import span
+
+@span
+async def process_event(event_id: str) -> None: ...
+
+@span(name="billing.charge", attributes={"provider": "stripe"})
+def charge(customer_id: str) -> None: ...
+```
+
+### Metrics
+
+```python
+from observability import SloMetrics, RateLimitMetrics, http_requests_total
+
+http_requests_total.labels(method="POST", path="/events", status_code="201").inc()
+
+slo = SloMetrics()
+slo.record_success()
+slo.record_error()
+slo.error_rate()          # 0.5
+
+rl = RateLimitMetrics()
+rl.hit("sms:user:42")
+rl.get("sms:user:42")     # 1
+```
+
+### Error classification
+
+```python
+from observability import classify_error
+
+classify_error(HTTPException(status_code=503))   # "server_error"
+classify_error(HTTPException(status_code=404))   # "client_error"
+classify_error(RuntimeError("boom"))             # "internal_error"
+```
+
+## Testing
+
+```bash
+uv run pytest -q          # 30 tests
+uv run ruff check .       # lint
+uv run mypy src/          # strict typing
 ```
 
 ## License

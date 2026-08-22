@@ -61,8 +61,11 @@ select = ["ALL"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = [
-    "ANN101", "ANN401", "S101",
+    "ANN001", "ANN101", "ANN401", "S101",
     "T20", "FBT", "D", "INP001",
+    "PLR2004", "PLC0415", "PT011",
+    "ARG001", "ARG002", "TRY003", "EM101", "EM102",
+    "SLF001", "ASYNC109",
 ]
 "src/**" = [
     "S104", "D", "ANN401", "ARG002",
