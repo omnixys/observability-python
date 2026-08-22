@@ -1,3 +1,10 @@
+## [4.0.1](https://github.com/omnixys/observability-python/compare/v4.0.0...v4.0.1) (2026-08-22)
+
+
+### Bug Fixes
+
+* **dir:** remove target dir ([1de9af2](https://github.com/omnixys/observability-python/commit/1de9af2bdf7ddcc64ee05f572ecc2f3470b4be3f))
+
 # [4.0.0](https://github.com/omnixys/observability-python/compare/v3.0.0...v4.0.0) (2026-08-03)
 
 
