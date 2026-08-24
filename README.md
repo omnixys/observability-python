@@ -46,6 +46,26 @@ log.error("payment_failed", status=503, token="sk_live_...")  # token -> [REDACT
 
 `LOG_PRETTY=true` forces colored console output; production defaults to JSON.
 
+#### Console vs. Loki levels
+
+The console threshold and the OTLP (Loki) threshold are independent:
+
+- `configure_logging("INFO", ...)` keeps the console at `INFO`.
+- The OTLP export defaults to `DEBUG`, so debug logs still appear in
+  Grafana/Loki in production while the console stays quiet.
+
+Override the Loki threshold via the `OTEL_LOG_LEVEL` environment variable or
+the `otel_log_level` parameter (values: `TRACE`, `DEBUG`, `INFO`, `WARNING`,
+`ERROR`; invalid values fall back to `DEBUG`):
+
+```bash
+OTEL_LOG_LEVEL=WARNING   # Loki receives WARNING and above only
+```
+
+```python
+configure_logging("INFO", service_name="ticketing", otel_log_level="DEBUG")
+```
+
 ### Spans
 
 ```python

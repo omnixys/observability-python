@@ -6,10 +6,11 @@ import io
 import logging
 import os
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 import structlog
+from opentelemetry._logs import SeverityNumber
 from opentelemetry.sdk._logs import LoggingHandler
 
 from observability import configure_logging, get_logger, shutdown_logging
@@ -191,3 +192,85 @@ def test_reconfigure_after_shutdown_does_not_leak_handlers() -> None:
 
     handlers = [h for h in logging.getLogger().handlers if isinstance(h, LoggingHandler)]
     assert len(handlers) == 1
+
+
+def _otlp_handler() -> LoggingHandler:
+    return next(h for h in logging.getLogger().handlers if isinstance(h, LoggingHandler))
+
+
+def _console_handler(stream: io.StringIO) -> logging.StreamHandler:
+    return next(
+        h
+        for h in logging.getLogger().handlers
+        if isinstance(h, logging.StreamHandler) and not isinstance(h, LoggingHandler) and h.stream is stream
+    )
+
+
+def test_root_logger_lowered_for_otlp_while_console_stays_info() -> None:
+    buf = io.StringIO()
+    configure_logging("INFO", "test-service", environment="local", console_stream=buf)
+
+    assert logging.getLogger().level == logging.DEBUG, (
+        "root must allow DEBUG records through so the OTLP handler receives them"
+    )
+    assert _console_handler(buf).level == logging.INFO
+    assert _otlp_handler().level == logging.DEBUG
+
+
+def test_otel_log_level_env_throttles_loki(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("OTEL_LOG_LEVEL", "WARNING")
+    buf = io.StringIO()
+    configure_logging("INFO", "test-service", environment="local", console_stream=buf)
+
+    assert _otlp_handler().level == logging.WARNING
+    assert logging.getLogger().level == logging.INFO
+    assert _console_handler(buf).level == logging.INFO
+
+
+def test_otel_log_level_param_beats_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("OTEL_LOG_LEVEL", "WARNING")
+    buf = io.StringIO()
+    configure_logging(
+        "INFO",
+        "test-service",
+        environment="local",
+        console_stream=buf,
+        otel_log_level="DEBUG",
+    )
+
+    assert _otlp_handler().level == logging.DEBUG
+    assert logging.getLogger().level == logging.DEBUG
+
+
+def test_invalid_otel_log_level_falls_back_to_debug(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("OTEL_LOG_LEVEL", "NOT_A_LEVEL")
+    buf = io.StringIO()
+    configure_logging("INFO", "test-service", environment="local", console_stream=buf)
+
+    assert _otlp_handler().level == logging.DEBUG
+
+
+def test_debug_reaches_otlp_while_console_stays_info(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: list[Any] = []
+
+    class _RecordingExporter(_FakeExporter):
+        def export(self, batch: object) -> object:
+            captured.extend(batch)  # type: ignore[arg-type]
+            return None
+
+    monkeypatch.setattr("observability.logging.OTLPLogExporter", _RecordingExporter)
+
+    buf = io.StringIO()
+    configure_logging("INFO", "test-service", environment="local", console_stream=buf)
+
+    get_logger("test").debug("cache_hit", key="user:1")
+    get_logger("test").info("application_started")
+
+    shutdown_logging()
+
+    severities = {record.log_record.severity_number for record in captured}
+    assert SeverityNumber.DEBUG in severities, "debug records must be exported to Loki"
+    assert SeverityNumber.INFO in severities
+
+    assert "cache_hit" not in buf.getvalue(), "debug records must stay off the info console"
+    assert "application_started" in buf.getvalue()

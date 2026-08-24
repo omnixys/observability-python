@@ -54,7 +54,9 @@ def _add_context(_logger: Any, _method_name: str, event_dict: MutableMapping[str
 
 
 def _redact_sensitive(
-    _logger: Any, _method_name: str, event_dict: MutableMapping[str, Any],
+    _logger: Any,
+    _method_name: str,
+    event_dict: MutableMapping[str, Any],
 ) -> MutableMapping[str, Any]:
     return _redact_mapping(event_dict)
 
@@ -66,9 +68,7 @@ def _redact_mapping(value: MutableMapping[str, Any]) -> MutableMapping[str, Any]
         elif isinstance(nested, dict):
             value[key] = _redact_mapping(nested)
         elif isinstance(nested, list):
-            value[key] = [
-                _redact_mapping(item) if isinstance(item, dict) else item for item in nested
-            ]
+            value[key] = [_redact_mapping(item) if isinstance(item, dict) else item for item in nested]
     return value
 
 
@@ -88,7 +88,13 @@ def _signal_endpoint(endpoint: str, signal: str) -> str:
     return f"{base}/v1/{signal}"
 
 
-def _setup_otel_logging(service_name: str, endpoint: str, environment: str) -> LoggerProvider:
+def _resolve_level(value: str | None, default: int) -> int:
+    if not value:
+        return default
+    return getattr(logging, value.strip().upper(), default)
+
+
+def _setup_otel_logging(service_name: str, endpoint: str, environment: str, level: int) -> LoggerProvider:
     global _logger_provider, _service_name, _otlp_handler, _otel_logger_provider_registered  # noqa: PLW0603
     if _logger_provider is not None:
         return _logger_provider
@@ -113,7 +119,7 @@ def _setup_otel_logging(service_name: str, endpoint: str, environment: str) -> L
     if _otlp_handler is not None:
         root.removeHandler(_otlp_handler)
     handler = LoggingHandler(logger_provider=logger_provider)
-    handler.setLevel(logging.DEBUG)
+    handler.setLevel(level)
     root.addHandler(handler)
     _otlp_handler = handler
     _logger_provider = logger_provider
@@ -141,7 +147,7 @@ class _JsonConsoleFormatter(logging.Formatter):
         message = record.getMessage()
         try:
             event_dict = json.loads(message)
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             return message
         if not isinstance(event_dict, dict):
             return message
@@ -155,17 +161,30 @@ def _build_console_formatter(*, pretty: bool) -> logging.Formatter:
     return logging.Formatter("%(message)s")
 
 
-def configure_logging(
+def configure_logging(  # noqa: PLR0913
     log_level: str = "INFO",
     service_name: str | None = None,
     *,
     otlp_endpoint: str | None = None,
     environment: str = "local",
     console_stream: TextIO | None = None,
+    otel_log_level: str | None = None,
 ) -> None:
-    level = getattr(logging, log_level.upper(), logging.INFO)
+    """Configure console and OTLP logging with independent thresholds.
+
+    The root logger is lowered to the least verbose of both levels so DEBUG
+    records can reach the OTLP handler (and therefore Loki) even while the
+    console handler stays on ``INFO`` in production. The OTLP threshold is
+    controlled via ``otel_log_level`` or the ``OTEL_LOG_LEVEL`` environment
+    variable and defaults to ``DEBUG``.
+    """
+    level = _resolve_level(log_level, logging.INFO)
+    otel_level = _resolve_level(
+        otel_log_level if otel_log_level is not None else os.environ.get("OTEL_LOG_LEVEL"),
+        logging.DEBUG,
+    )
     root = logging.getLogger()
-    root.setLevel(level)
+    root.setLevel(min(level, otel_level))
 
     for handler in _console_handlers:
         root.removeHandler(handler)
@@ -180,7 +199,7 @@ def configure_logging(
 
     if service_name:
         endpoint = otlp_endpoint or os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318")
-        _setup_otel_logging(service_name, endpoint, environment)
+        _setup_otel_logging(service_name, endpoint, environment, level=otel_level)
 
     structlog.configure(
         processors=[
