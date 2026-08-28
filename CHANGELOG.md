@@ -1,3 +1,10 @@
+# [4.1.0](https://github.com/omnixys/observability-python/compare/v4.0.1...v4.1.0) (2026-08-28)
+
+
+### Features
+
+* **logging:** keep debug logs visible in loki while console stays on info ([1fa9f6b](https://github.com/omnixys/observability-python/commit/1fa9f6b86de5d4cd2ee9ae4d6e903c449651e45f))
+
 ## [4.0.1](https://github.com/omnixys/observability-python/compare/v4.0.0...v4.0.1) (2026-08-22)
 
 

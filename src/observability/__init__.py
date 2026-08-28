@@ -29,7 +29,7 @@ from observability.request_context import (
 from observability.runtime import configure_observability, shutdown_observability
 from observability.tracing import configure_tracing, instrument_fastapi, shutdown_tracing, span, uninstrument_fastapi
 
-__version__ = "4.0.1"
+__version__ = "4.1.0"
 
 __all__ = [
     "ErrorClassifier",
