@@ -29,7 +29,6 @@ from observability.request_context import (
 from observability.runtime import configure_observability, shutdown_observability
 from observability.tracing import configure_tracing, instrument_fastapi, shutdown_tracing, span, uninstrument_fastapi
 
-
 __all__ = [
     "ErrorClassifier",
     "ObservabilityMetrics",
