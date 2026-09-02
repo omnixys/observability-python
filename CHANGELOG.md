@@ -1,3 +1,35 @@
+# 🧾 Changelog
+
+All notable changes in this project will be documented in this file.
+
+
+## [4.1.2](https://github.com/omnixys/observability-python/compare/v4.1.1...v4.1.2) (2026-09-02)
+
+### Ci
+
+* **Ci:** add setup-uv to release job for uv lock in prepare cmd ([](https://github.com/omnixys/observability-python/commit/fdf6abbf459ff7e5855404400f52d2c55f4f06a1))
+* **Ci:** pin conventional-changelog-conventionalcommits to v9 for release-notes-generator compat ([](https://github.com/omnixys/observability-python/commit/fb34b3c5ee65f186c85558150b3827d8bac2c77a))
+
+### Deps
+
+* **Deps:** update omnixys deps ([](https://github.com/omnixys/observability-python/commit/3f64e33ce155fa55e2114a8bcdfc68872f1659ea))
+
+### Other
+
+* **Other:** Merge branch 'main' of https://github.com/omnixys/observability-python ([](https://github.com/omnixys/observability-python/commit/89a225edc5b0a0d067f519db0cfeb873f70c6cbf))
+* **Other:** Merge pull request #1 from omnixys/migration/uuid-v7 ([](https://github.com/omnixys/observability-python/commit/2b58c7a46008d75160011cbfd5f530df1827e361)), closes [#1](https://github.com/omnixys/observability-python/issues/1)
+* **Other:** Update release.config.js ([](https://github.com/omnixys/observability-python/commit/fc1004c4d9c4535722d0eeaeaa3c12adec9a7d04))
+* **Other:** Update release.yml ([](https://github.com/omnixys/observability-python/commit/a623c8247c0439bd8cc8bb56396d8717a73911e2))
+
+### Packaging
+
+* **Packaging:** move package version to pyproject.toml and align release workflow ([](https://github.com/omnixys/observability-python/commit/e9f5e394be3f2643a435b384dd2f4c45205cd666))
+
+### Release
+
+* **Release:** Update release.config.js ([](https://github.com/omnixys/observability-python/commit/88727c889f1cee47939499163b67f4b2bcfeb7cb))
+* **Release:** Update release.yml ([](https://github.com/omnixys/observability-python/commit/a3bf9df0a1c21919a013d6e2fbe0a04e7f4c7677))
+
 ## [4.1.1](https://github.com/omnixys/observability-python/compare/v4.1.0...v4.1.1) (2026-09-02)
 
 
