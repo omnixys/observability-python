@@ -20,37 +20,140 @@ export default {
   branches: ['main'],
   tagFormat: 'v${version}',
   plugins: [
-    ['@semantic-release/commit-analyzer', {
-      preset: 'conventionalcommits',
-      releaseRules: [
-        { type: 'breaking', release: 'major' },
-        { type: 'feat', release: 'minor' },
-        { type: 'fix', release: 'patch' },
-        { type: 'perf', release: 'patch' },
-        { type: 'refactor', release: 'patch' },
-        { type: 'revert', release: 'patch' },
-        { type: 'docs', release: false },
-        { type: 'style', release: false },
-        { type: 'test', release: false },
-        { type: 'chore', release: false },
-        { type: 'ci', release: false },
-        { type: 'build', release: false },
-      ],
-    }],
-    '@semantic-release/release-notes-generator',
-    ['@semantic-release/changelog', { changelogFile: 'CHANGELOG.md' }],
-    ['@semantic-release/exec', {
-      prepareCmd: 'sed -i "s/__version__ = \\".*\\"/__version__ = \\"${nextRelease.version}\\"/" src/observability/__init__.py',
-    }],
-    ['@semantic-release/git', {
-      assets: ['pyproject.toml', 'CHANGELOG.md', 'src/observability/__init__.py'],
-      message: 'chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}',
-    }],
-    ['@semantic-release/github', {
-      assets: [
-        { path: 'CHANGELOG.md', label: 'Changelog' },
-        { path: 'dist/**', label: 'Build Artifacts' },
-      ],
-    }],
+    /**
+     * Analyze commits and determine next version
+     */
+    [
+      "@semantic-release/commit-analyzer",
+      {
+        preset: "conventionalcommits",
+        releaseRules: [
+          { type: "breaking", release: "major" },
+          { type: "feat", release: "minor" },
+          { type: "fix", release: "patch" },
+          { type: "perf", release: "patch" },
+          { type: "refactor", release: "patch" },
+          { type: "revert", release: "patch" },
+          { type: "update", release: "patch" },
+
+          // Explicitly ignore these types
+          { type: "docs", release: false },
+          { type: "style", release: false },
+          { type: "test", release: false },
+          { type: "chore", release: false },
+          { type: "ci", release: false },
+          { type: "build", release: false },
+        ],
+      },
+    ],
+
+    /**
+     * Generate structured release notes
+     */
+    [
+      "@semantic-release/release-notes-generator",
+      {
+        preset: "conventionalcommits",
+
+        writerOpts: {
+          groupBy: "scope",
+          commitGroupsSort: "title",
+          commitsSort: ["type", "scope", "subject"],
+
+          transform(commit) {
+            const issues = commit.references?.map((ref) => `#${ref.issue}`) ?? [];
+
+            return {
+              ...commit,
+              scope: commit.scope
+                ? commit.scope.charAt(0).toUpperCase() + commit.scope.slice(1)
+                : "Other",
+              subject: commit.subject,
+              issues,
+            };
+          },
+        },
+
+        presetConfig: {
+          types: [
+            { type: "feat", section: "✨ Features" },
+            { type: "fix", section: "🐛 Bug Fixes" },
+            { type: "perf", section: "⚡ Performance Improvements" },
+            { type: "refactor", section: "♻️ Refactoring" },
+            { type: "revert", section: "⏪ Reverts" },
+          ],
+        },
+      },
+    ],
+
+    /**
+     * Generate / update CHANGELOG.md
+     */
+    [
+      "@semantic-release/changelog",
+      {
+        changelogFile: "CHANGELOG.md",
+        changelogTitle:
+          "# 🧾 Changelog\n\nAll notable changes in this project will be documented in this file.\n",
+      },
+    ],
+
+    /**
+     * 🔥 Update version in pyproject.toml via sed (like Python services)
+     */
+    [
+      "@semantic-release/exec",
+      {
+        prepareCmd:
+          "sed -i.bak 's/^version = \".*\"/version = \"${nextRelease.version}\"/' pyproject.toml && rm -f pyproject.toml.bak && uv lock",
+      },
+    ],
+
+    /**
+     * Commit release artifacts back to repository
+     */
+    [
+      "@semantic-release/git",
+      {
+        assets: ["pyproject.toml", "uv.lock", "CHANGELOG.md"],
+        message: "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}",
+      },
+    ],
+
+    /**
+     * Create GitHub Release
+     */
+    [
+      "@semantic-release/github",
+      {
+        assets: [
+          { path: "CHANGELOG.md", label: "Changelog" },
+        ],
+
+        releaseBodyTemplate: `
+        # 🚀 Release v<%= nextRelease.version %>
+---
+
+## 📦 Changes
+
+<%= nextRelease.notes %>
+
+---
+
+## 🔎 Release Details
+
+- Git Tag: <%= nextRelease.gitTag %>
+- Branch: <%= branch.name %>
+- Previous Version: <%= lastRelease ? lastRelease.version : 'N/A' %>
+- Commit: <%= nextRelease.gitHead.substring(0, 7) %>
+
+---
+
+🏢 **Organization:** Omnixys
+🔗 **Repository:** Repository: <%= options.repositoryUrl %>
+🧭 **Docs:** https://omnixys.com/docs
+`,
+      },
+    ],
   ],
 };
