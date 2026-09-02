@@ -3,6 +3,16 @@
 All notable changes in this project will be documented in this file.
 
 
+## [4.1.3](https://github.com/omnixys/observability-python/compare/v4.1.2...v4.1.3) (2026-09-02)
+
+### Deps
+
+* **Deps:** update omnixys deps ([](https://github.com/omnixys/observability-python/commit/27453b627a0a150717bc6787df479893e58d7716))
+
+### Other
+
+* **Other:** Merge branch 'main' of https://github.com/omnixys/observability-python ([](https://github.com/omnixys/observability-python/commit/1c2f6c9eddd92d648d53f2f68c2b6d08d58ddd9e))
+
 ## [4.1.2](https://github.com/omnixys/observability-python/compare/v4.1.1...v4.1.2) (2026-09-02)
 
 ### Ci
