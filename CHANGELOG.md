@@ -1,3 +1,10 @@
+## [4.1.1](https://github.com/omnixys/observability-python/compare/v4.1.0...v4.1.1) (2026-09-02)
+
+
+### Bug Fixes
+
+* **ci:** publish tagged release to PyPI ([6406a5a](https://github.com/omnixys/observability-python/commit/6406a5abbf81d3e4a0835071b73a6ebf6e240172))
+
 # [4.1.0](https://github.com/omnixys/observability-python/compare/v4.0.1...v4.1.0) (2026-08-28)
 
 
