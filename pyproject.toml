@@ -1,6 +1,6 @@
 [project]
 name = "omnixys-observability"
-dynamic = ["version"]
+version = "4.1.1"
 description = "Omnixys shared observability package (OTel tracing, structured logging, Prometheus metrics)"
 readme = "README.md"
 license = { text = "GPL-3.0-or-later" }
@@ -38,8 +38,6 @@ Repository = "https://github.com/omnixys/omnixys"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.hatch.version]
-path = "src/observability/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/observability"]

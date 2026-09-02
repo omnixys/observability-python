@@ -15,10 +15,35 @@
  *
  * For more information, visit <https://www.gnu.org/licenses/>.
  */
+/** biome-ignore-all lint/suspicious/noTemplateCurlyInString: in use */
+
+/**
+ * Semantic Release configuration for Omnixys Python packages.
+ *
+ * Features:
+ * - Automatic semantic versioning (patch/minor/major)
+ * - Conventional Commits based analysis
+ * - Automatic CHANGELOG.md generation
+ * - Version managed in pyproject.toml (like Python services)
+ * - Git tag creation (vX.Y.Z)
+ * - GitHub Release creation
+ * - CI-safe (skip-ci on release commit)
+ */
 
 export default {
-  branches: ['main'],
-  tagFormat: 'v${version}',
+  /**
+   * Release is only allowed from main
+   */
+  branches: ["main"],
+
+  /**
+   * Explicit tag format
+   */
+  tagFormat: "v${version}",
+
+  /**
+   * Plugins pipeline
+   */
   plugins: [
     /**
      * Analyze commits and determine next version
