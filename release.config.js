@@ -172,7 +172,7 @@ export default {
 - Previous Version: <%= lastRelease ? lastRelease.version : 'N/A' %>
 - Commit: <%= nextRelease.gitHead.substring(0, 7) %>
 
----
+--- 
 
 🏢 **Organization:** Omnixys
 🔗 **Repository:** Repository: <%= options.repositoryUrl %>
