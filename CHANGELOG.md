@@ -3,6 +3,16 @@
 All notable changes in this project will be documented in this file.
 
 
+## [4.2.0](https://github.com/omnixys/observability-python/compare/v4.1.4...v4.2.0) (2026-09-19)
+
+### Logging
+
+* **Logging:** add NOISE and TRACE levels with noise re-routing ([](https://github.com/omnixys/observability-python/commit/c99402f8d26107a57ca5bf7d431360aaa9845abb))
+
+### Other
+
+* **Other:** Merge branch 'main' of https://github.com/omnixys/observability-python ([](https://github.com/omnixys/observability-python/commit/af11016df3286143aa5dd30e5eb887d6a80b1edc))
+
 ## [4.1.4](https://github.com/omnixys/observability-python/compare/v4.1.3...v4.1.4) (2026-09-19)
 
 ### Deps
