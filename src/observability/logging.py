@@ -21,7 +21,24 @@ from observability.request_context import current_request_context
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
 
+NOISE = 1
+TRACE = 5
+
 _SENSITIVE_KEY = re.compile(r"authorization|cookie|password|secret|token|api[-_]?key", re.IGNORECASE)
+
+_NOISE_SOURCES = (
+    "aiokafka",
+    "kafka",
+    "urllib3",
+    "requests",
+    "httpx",
+    "httpcore",
+    "opentelemetry.exporter.otlp",
+)
+
+_ROUTED_OVERRIDDEN = frozenset(
+    {"name", "msg", "args", "levelno", "levelname", "pathname", "lineno", "exc_info", "message"},
+)
 
 
 def _add_context(_logger: Any, _method_name: str, event_dict: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: C901
@@ -77,6 +94,7 @@ _service_name: str | None = None
 _console_handlers: list[logging.Handler] = []
 _otlp_handler: logging.Handler | None = None
 _otel_logger_provider_registered = False
+_noise_loggers: dict[str, list[logging.Handler]] = {}
 
 
 def _signal_endpoint(endpoint: str, signal: str) -> str:
@@ -161,6 +179,76 @@ def _build_console_formatter(*, pretty: bool) -> logging.Formatter:
     return logging.Formatter("%(message)s")
 
 
+def _log_noise(logger: logging.Logger, message: object, *args: object) -> None:
+    logger.log(NOISE, message, *args)
+
+
+def _log_trace(logger: logging.Logger, message: object, *args: object) -> None:
+    logger.log(TRACE, message, *args)
+
+
+def _install_stdlib_levels() -> None:
+    logging.addLevelName(NOISE, "NOISE")
+    logging.addLevelName(TRACE, "TRACE")
+    logging.NOISE = NOISE  # type: ignore[attr-defined]
+    logging.TRACE = TRACE  # type: ignore[attr-defined]
+    if not hasattr(logging.Logger, "noise"):
+        logging.Logger.noise = _log_noise  # type: ignore[attr-defined]
+    if not hasattr(logging.Logger, "trace"):
+        logging.Logger.trace = _log_trace  # type: ignore[attr-defined]
+
+
+class _BoundLogger(structlog.stdlib.BoundLogger):
+    def noise(self, event: str | None = None, *args: Any, **kw: Any) -> Any:
+        return self._proxy_to_logger("noise", event, *args, **kw)
+
+    def trace(self, event: str | None = None, *args: Any, **kw: Any) -> Any:
+        return self._proxy_to_logger("trace", event, *args, **kw)
+
+
+class _NoiseRouter(logging.Handler):
+    """Re-level low-value library chatter to NOISE while preserving WARNING/ERROR."""
+
+    def emit(self, record: logging.LogRecord) -> None:
+        routed = logging.LogRecord(
+            name=f"noise.{record.name}",
+            level=record.levelno if record.levelno >= logging.WARNING else NOISE,
+            pathname=record.pathname,
+            lineno=record.lineno,
+            msg=record.getMessage(),
+            args=(),
+            exc_info=record.exc_info,
+        )
+        for key, value in record.__dict__.items():
+            if key not in _ROUTED_OVERRIDDEN:
+                setattr(routed, key, value)
+        routed.levelname = logging.getLevelName(routed.levelno)
+        logging.getLogger().handle(routed)
+
+
+def _install_noise_routing() -> None:
+    for source in _NOISE_SOURCES:
+        if source in _noise_loggers:
+            continue
+        target = logging.getLogger(source)
+        target.setLevel(logging.DEBUG)
+        target.propagate = False
+        handler = _NoiseRouter()
+        target.addHandler(handler)
+        _noise_loggers[source] = [handler]
+
+
+def _remove_noise_routing() -> None:
+    for source, handlers in list(_noise_loggers.items()):
+        target = logging.getLogger(source)
+        for handler in handlers:
+            target.removeHandler(handler)
+        if not target.handlers:
+            target.setLevel(logging.NOTSET)
+            target.propagate = True
+    _noise_loggers.clear()
+
+
 def configure_logging(  # noqa: PLR0913
     log_level: str = "INFO",
     service_name: str | None = None,
@@ -178,6 +266,7 @@ def configure_logging(  # noqa: PLR0913
     controlled via ``otel_log_level`` or the ``OTEL_LOG_LEVEL`` environment
     variable and defaults to ``DEBUG``.
     """
+    _install_stdlib_levels()
     level = _resolve_level(log_level, logging.INFO)
     otel_level = _resolve_level(
         otel_log_level if otel_log_level is not None else os.environ.get("OTEL_LOG_LEVEL"),
@@ -201,6 +290,8 @@ def configure_logging(  # noqa: PLR0913
         endpoint = otlp_endpoint or os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318")
         _setup_otel_logging(service_name, endpoint, environment, level=otel_level)
 
+    _install_noise_routing()
+
     structlog.configure(
         processors=[
             structlog.contextvars.merge_contextvars,
@@ -211,7 +302,7 @@ def configure_logging(  # noqa: PLR0913
             structlog.processors.TimeStamper(fmt="iso", utc=True),
             structlog.processors.JSONRenderer(),
         ],
-        wrapper_class=structlog.stdlib.BoundLogger,
+        wrapper_class=_BoundLogger,
         logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,
     )
@@ -224,6 +315,7 @@ def get_logger(name: str | None = None) -> Any:
 def shutdown_logging() -> None:
     global _logger_provider, _otlp_handler  # noqa: PLW0603
     root = logging.getLogger()
+    _remove_noise_routing()
     if _otlp_handler is not None:
         root.removeHandler(_otlp_handler)
         _otlp_handler = None

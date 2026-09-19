@@ -14,6 +14,7 @@ from opentelemetry._logs import SeverityNumber
 from opentelemetry.sdk._logs import LoggingHandler
 
 from observability import configure_logging, get_logger, shutdown_logging
+from observability.logging import NOISE, TRACE
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -274,3 +275,95 @@ def test_debug_reaches_otlp_while_console_stays_info(monkeypatch: pytest.MonkeyP
 
     assert "cache_hit" not in buf.getvalue(), "debug records must stay off the info console"
     assert "application_started" in buf.getvalue()
+
+
+def test_noise_level_is_below_trace_and_debug() -> None:
+    assert NOISE < TRACE < logging.DEBUG
+
+
+def test_configure_logging_accepts_noise_and_trace_levels() -> None:
+    configure_logging("NOISE", "test-service", environment="local", console_stream=io.StringIO())
+    assert logging.getLogger().level == NOISE
+
+    shutdown_logging()
+    configure_logging("TRACE", "test-service", environment="local", console_stream=io.StringIO())
+    assert logging.getLogger().level == TRACE
+
+
+def test_noise_routing_suppresses_library_chatter_by_default() -> None:
+    buf = _capture(environment="local")
+    logging.getLogger("urllib3.connectionpool").info('http://localhost:4318 "POST /v1/logs HTTP/1.1" 200 2')
+    logging.getLogger("urllib3.connectionpool").debug("Starting new HTTPS connection")
+
+    assert buf.getvalue() == ""
+
+
+def test_noise_routing_preserves_library_warnings() -> None:
+    buf = _capture(environment="local")
+    logging.getLogger("aiokafka").warning("broker localhost:9092 became unavailable")
+
+    plain = _strip_ansi(buf.getvalue())
+    assert "broker localhost:9092 became unavailable" in plain
+
+
+def test_noise_visible_when_console_level_is_noise() -> None:
+    buf = io.StringIO()
+    configure_logging("NOISE", "test-service", environment="local", console_stream=buf)
+    logging.getLogger("urllib3.connectionpool").info('http://localhost:4318 "POST /v1/logs HTTP/1.1" 200 2')
+
+    assert "POST /v1/logs" in _strip_ansi(buf.getvalue())
+
+
+def test_structlog_noise_and_trace_methods() -> None:
+    buf = io.StringIO()
+    configure_logging("NOISE", "test-service", environment="local", console_stream=buf)
+    get_logger("test").noise("kafka_bootstrap_chatter")
+    get_logger("test").trace("dns_lookup")
+
+    plain = _strip_ansi(buf.getvalue())
+    assert "kafka_bootstrap_chatter" in plain
+    assert "[noise" in plain
+    assert "dns_lookup" in plain
+    assert "[trace" in plain
+
+
+def test_noise_stays_out_of_otlp_at_default_otel_level(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: list[Any] = []
+
+    class _RecordingExporter(_FakeExporter):
+        def export(self, batch: object) -> object:
+            captured.extend(batch)  # type: ignore[arg-type]
+            return None
+
+    monkeypatch.setattr("observability.logging.OTLPLogExporter", _RecordingExporter)
+    configure_logging("INFO", "test-service", environment="local", console_stream=io.StringIO())
+    logging.getLogger("urllib3.connectionpool").info("otlp-noise-off")
+
+    shutdown_logging()
+
+    assert captured == []
+
+
+def test_noise_reaches_otlp_when_otel_level_is_noise(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: list[Any] = []
+
+    class _RecordingExporter(_FakeExporter):
+        def export(self, batch: object) -> object:
+            captured.extend(batch)  # type: ignore[arg-type]
+            return None
+
+    monkeypatch.setattr("observability.logging.OTLPLogExporter", _RecordingExporter)
+    configure_logging(
+        "INFO",
+        "test-service",
+        environment="local",
+        console_stream=io.StringIO(),
+        otel_log_level="NOISE",
+    )
+    logging.getLogger("urllib3.connectionpool").info("otlp-noise-on")
+
+    shutdown_logging()
+
+    assert captured, "noise must be exported when otel_log_level is NOISE"
+    severities = {record.log_record.severity_number.value for record in captured}
+    assert all(severity < SeverityNumber.DEBUG.value for severity in severities)

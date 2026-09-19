@@ -55,8 +55,8 @@ The console threshold and the OTLP (Loki) threshold are independent:
   Grafana/Loki in production while the console stays quiet.
 
 Override the Loki threshold via the `OTEL_LOG_LEVEL` environment variable or
-the `otel_log_level` parameter (values: `TRACE`, `DEBUG`, `INFO`, `WARNING`,
-`ERROR`; invalid values fall back to `DEBUG`):
+the `otel_log_level` parameter (values: `NOISE`, `TRACE`, `DEBUG`, `INFO`,
+`WARNING`, `ERROR`; invalid values fall back to `DEBUG`):
 
 ```bash
 OTEL_LOG_LEVEL=WARNING   # Loki receives WARNING and above only
@@ -65,6 +65,27 @@ OTEL_LOG_LEVEL=WARNING   # Loki receives WARNING and above only
 ```python
 configure_logging("INFO", service_name="ticketing", otel_log_level="DEBUG")
 ```
+
+#### Noise and trace levels
+
+`NOISE` is the quietest level. It exists for transport/protocol chatter that
+carries no value in normal operation (Kafka client requests/responses, OTLP
+HTTP exporter `POST /v1/logs` lines, HTTP connection logs). Records at `NOISE`
+are only emitted to a sink when its level is explicitly set to `NOISE`
+(`log_level="NOISE"`, `otel_log_level="NOISE"`, or `LOG_LEVEL`/`OTEL_LOG_LEVEL`).
+
+- `TRACE` sits between `NOISE` and `DEBUG` and is available for application
+  tracing that you still want to opt into.
+- Both levels are available on the package logger
+  (`get_logger("ticketing").noise("kafka_request")`,
+  `.trace("dns_lookup")`) as well as on stdlib loggers
+  (`logging.getLogger(...).noise(...)`, `.trace(...)`).
+
+The following third-party loggers are re-routed automatically: `aiokafka`,
+`kafka`, `urllib3`, `requests`, `httpx`, `httpcore`, and the OTLP exporter.
+Their `DEBUG`/`INFO` chatter is re-leveled to `NOISE` so it stays invisible at
+default levels but is still recoverable. `WARNING` and `ERROR` records from
+these loggers pass through unchanged.
 
 ### Spans
 
@@ -108,7 +129,7 @@ classify_error(RuntimeError("boom"))             # "internal_error"
 ## Testing
 
 ```bash
-uv run pytest -q          # 30 tests
+uv run pytest -q          # 44 tests
 uv run ruff check .       # lint
 uv run mypy src/          # strict typing
 ```
